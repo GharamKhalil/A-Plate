@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة القيادة - نظام تتبع المرور المتقدم (الرياض)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <style>
+        /* التنسيق الموحد */
+        body { margin: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #1e1e2d; color: #d0d0e0; }
+        header { background: #28283c; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #00aaff; }
+        header img { height: 40px; margin-left: 15px; }
+        .logo-text { font-size: 24px; font-weight: bold; color: white; }
+        
+        /* التغيير هنا: تم زيادة عرض القائمة الجانبية من 220px إلى 280px */
+        .dashboard-layout { display: grid; grid-template-columns: 280px 1fr 300px; height: calc(100vh - 60px); }
+        
+        /* القائمة الجانبية (Sidebar) */
+        .sidebar { background: #2a2a3e; padding: 10px 0; }
+   .sidebar a { 
+            display: flex;
+            align-items: center;
+            padding: 14px 30px; 
+            text-decoration: none; 
+            color: #d0d0e0; 
+            font-size: 15px; 
+            transition: background 0.3s, color 0.3s; 
+            border-right: 4px solid transparent; 
+            font-weight: 500;
+            gap: 10px;
+        }
+        .sidebar a:hover, .sidebar .active { 
+            background: #3c3c5c; 
+            border-right-color: #00aaff; 
+            color: white; 
+        }
+        /* تم تعديل اسم الفئة من .material-icons-outlined إلى .sidebar a i */
+        .sidebar a i {
+            font-size: 20px;
+            color: #d0d0e0;
+        }
+        .sidebar .active i {
+            color: white;
+        }
+        
+        /* الخريطة والتنبيهات */
+        #map-container { position: relative; border-left: 1px solid #3c3c5c; border-right: 1px solid #3c3c5c; }
+        #map { height: 100%; filter: invert(90%) hue-rotate(180deg); } 
+        .alerts-bar { position: absolute; top: 10px; left: 10px; right: 10px; background: rgba(255, 0, 0, 0.9); color: white; padding: 15px; border-radius: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
+        .alerts-bar button { background: white; color: red; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        
+        /* لوحة KPIs */
+        .kpi-panel { background: #2a2a3e; padding: 20px; overflow-y: auto; }
+        .kpi-card { background: #3c3c5c; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #00aaff; }
+        .kpi-card h4 { margin: 0 0 5px 0; color: #a0a0b0; font-size: 14px; }
+        .kpi-card .value { font-size: 32px; font-weight: bold; color: #1abc9c; }
+        .kpi-card .desc { font-size: 12px; color: #808090; }
+
+        /* تنسيق AI Insight */
+        .ai-insight { background: #1a3c5a; padding: 15px; border-radius: 8px; margin-top: 20px; border-right: 4px solid #00aaff; font-size: 14px; margin-bottom: 10px;}
+        .ai-insight.critical { background: #5a1a1a; border-right-color: #ff5252; }
+        .ai-insight strong { color: white; }
+        .ai-insight p { margin: 5px 0 0 0; color: #a0a0b0; }
+        
+        /* تنسيق Popup Leaflet */
+        .leaflet-popup-content-wrapper { background: #2a2a3e; color: white; border-radius: 8px; }
+        .leaflet-popup-tip { background: #2a2a3e; }
+
+    </style>
+    <link rel="stylesheet" href="assets/fixes.css">
+    <link rel="stylesheet" href="assets/refined.css">
+</head>
+<body>
+
+<header>
+    <div style="display: flex; align-items: center;">
+        <span class="logo-text">نظام المرور الذكي</span>
+    </div>
+</header>
+
+<div class="dashboard-layout">
+     <div class="sidebar">
+        <a href="dashboard.html" class="active" aria-current="page"> <i class="fas fa-tachometer-alt"></i> لوحة القيادة</a>
+        <a href="alerts_center.html"> <i class="fas fa-bell"></i> مركز التنبيهات</a>
+        <a href="analytics_reports.html" > <i class="fas fa-chart-line"></i> التحليل والتقارير</a>
+        <a href="device_details.html"> <i class="fas fa-car"></i> تفاصيل المركبة</a>
+        <a href="field_inspector_mgt.html"> <i class="fas fa-users"></i> إدارة المفتشين</a>
+    </div>
+
+    <div id="map-container">
+        <div id="map"></div>
+        <div class="alerts-bar" id="alertsBar">
+            <span>🚨 تنبيهات حرجة غير مُعالجة: <span id="alertCount">7</span></span>
+            <button onclick="window.location.href='alerts_center.html'">الانتقال للمعالجة</button>
+        </div>
+    </div>
+
+    <div class="kpi-panel">
+        <h3>مؤشرات الأداء الرئيسية</h3>
+        
+        <div class="kpi-card">
+            <h4>المركبات النشطة</h4>
+            <div class="value" id="kpi-active-plates">8,785</div>
+            <div class="desc">تغير +5% اليوم</div>
+        </div>
+
+        <div class="kpi-card" style="border-left-color: #ffc107;">
+            <h4>المخالفات المكتشفة (24 ساعة)</h4>
+            <div class="value" id="kpi-violations">24</div>
+            <div class="desc">منها 3 مخالفات سرعة حرجة</div>
+        </div>
+
+        <div class="kpi-card" style="border-left-color: #1abc9c;">
+            <h4>متوسط زمن الاستجابة</h4>
+            <div class="value" id="kpi-response-time">12 دقيقة</div>
+            <div class="desc">تحسن -3 دقائق عن الأمس</div>
+        </div>
+
+        <h3 style="margin-top: 30px;">بحث المركبة بالمعرف</h3>
+        <div style="margin-bottom: 20px;">
+            <input type="text" id="vehicleSearchID" placeholder="أدخل معرف المركبة (مثال: V1)" 
+                    style="padding: 8px; border-radius: 4px; border: 1px solid #3c3c5c; background: #2a2a3e; color: #d0d0e0; width: 60%; margin-left: 10px;">
+            <button onclick="searchVehicleByID()" 
+                    style="padding: 8px 12px; background: #00aaff; color: white; border: none; border-radius: 4px; cursor: pointer;">بحث</button>
+        </div>
+        
+        <h3 style="margin-top: 30px;">رؤى الذكاء الاصطناعي (AI)</h3>
+
+        <div class="ai-insight critical">
+            <strong>⚠️ توقع ازدحام مروري</strong>
+            <p id="ai-traffic-insight">يُتوقع تشكل ازدحام كبير عند **طريق الملك فهد - مخرج 8** خلال 30 دقيقة (كثافة حرجة).</p>
+        </div>
+        
+        <div class="ai-insight">
+            <strong>⚠️ توقع عطل فني</strong>
+            <p id="ai-fault-insight">يُتوقع فقدان إشارة اللوحة في **مركبة (R123)** خلال ساعة، بناءً على تذبذب البطارية.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // -----------------------------------------------------------
+    // إعدادات المدينة الوحيدة (الرياض)
+    // -----------------------------------------------------------
+    const CITY_DATA = {
+        key: 'Riyadh',
+        center: [24.7136, 46.6753],
+        zoom: 12,
+        name: 'الرياض',
+        count: 8785 // عدد المركبات الكلي للمحاكاة
+    };
+
+    // -----------------------------------------------------------
+    // إعداد الخريطة
+    // -----------------------------------------------------------
+    let map = L.map('map');
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let heatLayer = null;
+    let markerLayer = L.layerGroup().addTo(map);
+
+    // تعريف أيقونات المركبات الملونة
+    const createCarIcon = (colorCode) => L.icon({
+        iconUrl: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg"><path fill="${colorCode}" d="M15 0C6.716 0 0 6.716 0 15c0 10.5 15 27 15 27s15-16.5 15-27c0-8.284-6.716-15-15-15z"/><circle fill="white" cx="15" cy="15" r="5"/></svg>`),
+        iconSize: [30, 42],
+        iconAnchor: [15, 42],
+        popupAnchor: [0, -35]
+    });
+
+    const ICONS = {
+        CRITICAL: createCarIcon('#FF5252'), 
+        HIGH: createCarIcon('#FFC107'),     
+        NORMAL: createCarIcon('#1ABC9C'),   
+        OFFLINE: createCarIcon('#A0A0A0')   
+    };
+
+    // -----------------------------------------------------------
+    // بيانات المركبات (ديناميكية)
+    // -----------------------------------------------------------
+    let VEHICLES = []; 
+
+    // دالة لتوليد بيانات مركبات عشوائية حول مركز الرياض
+    function generateCityVehicles(cityKey, count) {
+        const [lat, lng] = CITY_DATA.center;
+        const vehicles = [];
+        // نولد عدداً أقل من العلامات لسهولة الإدارة ولكنها تمثل العدد الكلي
+        const markerCount = 20; 
+        for (let i = 0; i < markerCount; i++) { 
+            const alertStatus = ['CRITICAL', 'HIGH', 'NORMAL'][Math.floor(Math.random() * 3)];
+            vehicles.push({
+                id: `V${i + 1}`, // معرف مبسط للربط بصفحة التفاصيل والبحث
+                name: `مركبة دورية # ${i + 1}`,
+                lat: lat + (Math.random() - 0.5) * 0.05, 
+                lng: lng + (Math.random() - 0.5) * 0.08,
+                alert: alertStatus,
+                speed: 40 + Math.floor(Math.random() * 80),
+                owner: `وزارة الداخلية - جهة ${i + 1}`
+            });
+        }
+        return vehicles;
+    }
+
+    // -----------------------------------------------------------
+    // وظيفة البحث بالمعرف
+    // -----------------------------------------------------------
+    function searchVehicleByID() {
+        const searchID = document.getElementById('vehicleSearchID').value.trim();
+        // لجعل البحث سهلاً للمستخدم، نحول الإدخال ليتطابق مع نمط V#
+        const formattedID = searchID.startsWith('V') ? searchID : `V${searchID}`;
+        
+        if (formattedID) {
+            const foundVehicle = VEHICLES.find(car => car.id === formattedID); 
+
+            if (foundVehicle) {
+                // الانتقال إلى صفحة التفاصيل مع تمرير المعرف عبر URL
+                window.location.href = `device_details.html?id=${foundVehicle.id}`;
+            } else {
+                alert(`لم يتم العثور على مركبة بالمعرف: ${searchID} أو ${formattedID}`);
+            }
+        }
+    }
+
+
+    // -----------------------------------------------------------
+    // رؤى الذكاء الاصطناعي الديناميكية (مخصصة للرياض)
+    // -----------------------------------------------------------
+    const DYNAMIC_INSIGHTS = {
+        traffic: [
+            "يُتوقع تشكل ازدحام كبير عند **طريق الملك فهد - مخرج 8** خلال 30 دقيقة (كثافة حرجة).",
+            "تحليل حركة المرور يتوقع تباطؤ عند **تقاطع طريق مكة والملك خالد** خلال 45 دقيقة.",
+            "زيادة متوقعة في حركة المركبات التجارية على **طريق الخرج** الليلة.",
+            "توقع ازدحام متوسط عند **تقاطع الدائري الشمالي وشارع العليا**."
+        ],
+        fault: [
+            "يُتوقع فقدان إشارة اللوحة في **مركبة (R123)** خلال ساعة، بناءً على تذبذب البطارية.",
+            "توقع عطل في مستشعر السرعة بـ **مركبة (R456)**، يجب الفحص.",
+            "بيانات تشخيصية تشير إلى احتمالية انقطاع اتصال GPS في **5 مركبات** مختلفة.",
+            "بيانات درجة الحرارة غير طبيعية في **مركبة (R789)**، يُنصح بالصيانة خلال 24 ساعة."
+        ]
+    };
+
+    function updateAIInsights() {
+        const insights = DYNAMIC_INSIGHTS; 
+
+        // تحديث رؤية الازدحام بشكل عشوائي
+        const trafficList = insights.traffic;
+        const randomTrafficIndex = Math.floor(Math.random() * trafficList.length);
+        document.getElementById('ai-traffic-insight').innerHTML = trafficList[randomTrafficIndex];
+
+        // تحديث رؤية الأعطال بشكل عشوائي
+        const faultList = insights.fault;
+        const randomFaultIndex = Math.floor(Math.random() * faultList.length);
+        document.getElementById('ai-fault-insight').innerHTML = faultList[randomFaultIndex];
+
+        // تعيين حالة الرؤية الحرجة بشكل عشوائي
+        const trafficCard = document.querySelector('.ai-insight.critical');
+        if (Math.random() < 0.3) {
+             trafficCard.classList.add('critical'); 
+        } else {
+             trafficCard.classList.remove('critical'); 
+        }
+    }
+
+
+    // -----------------------------------------------------------
+    // وظائف التحديث الأساسية
+    // -----------------------------------------------------------
+    
+    function updateMapData() {
+        markerLayer.clearLayers();
+        const heatData = [];
+        
+        VEHICLES.forEach(car => {
+            let intensity = 0.2;
+            if (car.alert === 'CRITICAL') intensity = 1.0;
+            else if (car.alert === 'HIGH') intensity = 0.6;
+            
+            heatData.push([car.lat, car.lng, intensity]);
+
+            const popupContent = `
+                <div style="text-align: right; color: white;">
+                    <strong>${car.name} (المعرف: ${car.id})</strong><br>
+                    المالك: ${car.owner}<br>
+                    حالة التنبيه: <span style="color: ${car.alert === 'CRITICAL' ? '#FF5252' : car.alert === 'HIGH' ? '#FFC107' : '#1ABC9C'};">${car.alert}</span><br>
+                    السرعة: ${car.speed} كم/س<br>
+                    <a href="device_details.html?id=${car.id}" style="color: #00aaff;">عرض التفاصيل</a>
+                </div>
+            `;
+            
+            L.marker([car.lat, car.lng], { icon: ICONS[car.alert] || ICONS.NORMAL })
+                .bindPopup(popupContent)
+                .addTo(markerLayer);
+        });
+
+        if (heatLayer) map.removeLayer(heatLayer);
+        heatLayer = (typeof L.heatLayer === "function" ? L.heatLayer(heatData, {
+            radius: 25,
+            blur: 15,
+            gradient: {0.4: '#1ABC9C', 0.65: '#FFC107', 1: '#FF5252'}
+        }).addTo(map) : null);
+    }
+    
+    function simulateMovementAndAlerts() {
+        VEHICLES.forEach(car => {
+            car.lat += (Math.random() - 0.5) * 0.001;
+            car.lng += (Math.random() - 0.5) * 0.002;
+            car.speed = 40 + Math.floor(Math.random() * 80);
+
+            const rand = Math.random();
+            if (rand < 0.1) car.alert = 'CRITICAL';
+            else if (rand < 0.3) car.alert = 'HIGH';
+            else car.alert = 'NORMAL';
+        });
+        
+        updateMapData();
+    }
+
+    function updateKPIs() {
+        const baseCount = CITY_DATA.count;
+        document.getElementById('kpi-active-plates').textContent = baseCount.toLocaleString('en-US');
+        document.getElementById('kpi-violations').textContent = (Math.floor(baseCount / 300) + Math.floor(Math.random() * 10)); 
+        document.getElementById('kpi-response-time').textContent = (10 + Math.floor(Math.random() * 5)) + ' دقيقة';
+        document.getElementById('alertCount').textContent = (Math.floor(baseCount / 1000) + Math.floor(Math.random() * 5));
+    }
+    
+    // -----------------------------------------------------------
+    // التهيئة والتشغيل
+    // -----------------------------------------------------------
+    
+    // تعيين عرض الخريطة الأولي للرياض
+    map.setView(CITY_DATA.center, CITY_DATA.zoom);
+
+    // توليد البيانات الأولية للرياض
+    VEHICLES = generateCityVehicles(CITY_DATA.key, CITY_DATA.count);
+    updateMapData();
+    updateKPIs();
+    updateAIInsights(); 
+
+    // تشغيل التحديثات اللحظية
+    setInterval(simulateMovementAndAlerts, 3000); 
+    setInterval(updateKPIs, 3000); 
+    setInterval(updateAIInsights, 5000); 
+</script>
+</body>
+</html>

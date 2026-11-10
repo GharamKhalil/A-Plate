@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>التحليل والتقارير - نظام تتبع المرور</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ------------------------------------------- */
+        /* التنسيق الموحد الداكن (Dark Theme) */
+        /* ------------------------------------------- */
+        body { margin: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #1e1e2d; color: #d0d0e0; }
+        header { 
+            background: #28283c; 
+            padding: 15px 30px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            border-bottom: 3px solid #00aaff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+        }
+        .logo-text { font-size: 26px; font-weight: 600; color: white; }
+        
+        /* ------------------------------------------- */
+        /* القائمة الجانبية (Sidebar) - تحديث فئة الأيقونات */
+        /* ------------------------------------------- */
+        .main-layout { display: grid; grid-template-columns: 240px 1fr; height: calc(100vh - 66px); }
+        .sidebar { background: #2a2a3e; padding: 20px 0; border-right: 1px solid #3c3c5c; }
+      .sidebar a { 
+            display: flex;
+            align-items: center;
+            padding: 14px 30px; 
+            text-decoration: none; 
+            color: #d0d0e0; 
+            font-size: 15px; 
+            transition: background 0.3s, color 0.3s; 
+            border-right: 4px solid transparent; 
+            font-weight: 500;
+            gap: 10px;
+        }
+        .sidebar a:hover, .sidebar .active { 
+            background: #3c3c5c; 
+            border-right-color: #00aaff; 
+            color: white; 
+        }
+        /* تم تعديل اسم الفئة من .material-icons-outlined إلى .sidebar a i */
+        .sidebar a i {
+            font-size: 20px;
+            color: #d0d0e0;
+        }
+        .sidebar .active i {
+            color: white;
+        }
+        
+        /* ------------------------------------------- */
+        /* محتوى التقارير - لوحة التحكم */
+        /* ------------------------------------------- */
+        .content { padding: 30px; overflow-y: auto; }
+        .content h2 { 
+            color: white; 
+            font-weight: 600; 
+            /* التعديل لزيادة المسافة بين العنوان وقسم الفلاتر */
+            margin-bottom: 25px; 
+        } 
+        .charts-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); 
+            gap: 25px; 
+            margin-top: 25px; 
+        }
+        .chart-box { 
+            background: #2a2a3e; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); 
+            height: 400px; 
+            border: 1px solid #3c3c5c; 
+        }
+        .chart-box h4 { color: white; margin-top: 0; border-bottom: 1px solid #3c3c5c; padding-bottom: 10px; }
+
+        /* ------------------------------------------- */
+        /* نموذج الفلاتر (تحسين التصميم) */
+        /* ------------------------------------------- */
+        .report-form { 
+            background: #2a2a3e; 
+            padding: 20px; 
+            border-radius: 12px; 
+            margin-bottom: 30px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 20px; 
+            align-items: flex-end; 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            border-left: 5px solid #00aaff; 
+        }
+        .form-group { flex-grow: 1; min-width: 150px; }
+        .download-btn { 
+            background: #1abc9c; 
+            color: white; 
+            border: none; 
+            padding: 12px 25px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: background 0.3s, box-shadow 0.3s;
+            box-shadow: 0 0 10px rgba(26, 188, 156, 0.5); 
+            min-width: 200px;
+        }
+        .download-btn:hover { 
+            background: #159c7f; 
+            box-shadow: 0 0 15px rgba(26, 188, 156, 0.8);
+        }
+        
+        /* تحسين شكل عناصر الإدخال والإختيار */
+        select, input[type="date"] { 
+            padding: 10px 12px; 
+            border-radius: 6px; 
+            background: #1e1e2d; 
+            color: white; 
+            border: 1px solid #555; 
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        select:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #00aaff;
+            box-shadow: 0 0 5px rgba(0, 170, 255, 0.5);
+        }
+        label { margin-bottom: 5px; font-weight: 500; display: block; color: #a0a0b0; }
+    </style>
+    <link rel="stylesheet" href="assets/fixes.css">
+    <link rel="stylesheet" href="assets/refined.css">
+</head>
+<body>
+
+<header>
+    <div style="display: flex; align-items: center;">
+        <span class="logo-text">التحاليل والتقارير  </span>
+    </div>
+</header>
+
+<div class="main-layout">
+   <div class="sidebar">
+        <a href="dashboard.html"> <i class="fas fa-tachometer-alt"></i> لوحة القيادة</a>
+        <a href="alerts_center.html"> <i class="fas fa-bell"></i> مركز التنبيهات</a>
+        <a href="analytics_reports.html" class="active" aria-current="page"> <i class="fas fa-chart-line"></i> التحليل والتقارير</a>
+        <a href="device_details.html"> <i class="fas fa-car"></i> تفاصيل المركبة</a>
+        <a href="field_inspector_mgt.html"> <i class="fas fa-users"></i> إدارة المفتشين</a>
+    </div>
+
+    <div class="content">
+        <h2 style="color: white; font-weight: 600; margin-bottom: 25px;">📊 لوحة التقارير المخصصة</h2>
+        
+        <div class="report-form">
+            <div class="form-group" style="max-width: 180px;">
+                <label for="city-filter">المدينة:</label>
+                <select id="city-filter" onchange="filterData()">
+                    <option value="Riyadh">الرياض</option>
+                    <option value="Jeddah">جدة</option>
+                    <option value="Dammam">الدمام</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="max-width: 180px;">
+                <label for="time-range">النطاق الزمني:</label>
+                <select id="time-range" onchange="filterData()">
+                    <option value="week">الأسبوع الماضي</option>
+                    <option value="month">الشهر الماضي</option>
+                    <option value="quarter">الربع الأخير</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="max-width: 180px;">
+                <label for="start-date">تاريخ البدء:</label>
+                <input type="date" id="start-date" value="2026-11-10" onchange="filterData()">
+            </div>
+            
+            <div class="form-group" style="max-width: 250px;">
+                <label for="report-type">نوع التقرير (للتنزيل):</label>
+                <select id="report-type">
+                    <option>تحليل مخالفات السرعة</option>
+                    <option>تقرير حالة أجهزة اللوحات</option>
+                    <option>تحليل كفاءة المسار</option>
+                    <option>أداء المفتشين الميدانيين</option>
+                </select>
+            </div>
+            
+            <button class="download-btn" onclick="generateReport()">⬇️ توليد وتنزيل التقرير</button>
+        </div>
+
+        <div class="charts-grid">
+            
+            <div class="chart-box">
+                <h4>📈 توزيع مخالفات السرعة الأسبوعي</h4>
+                <canvas id="speedViolationChart"></canvas>
+            </div>
+
+            <div class="chart-box">
+                <h4>📡 حالة اتصال اللوحات (نسب مئوية)</h4>
+                <canvas id="connectionStatusChart"></canvas>
+            </div>
+
+            <div class="chart-box">
+                <h4>⏱️ متوسط زمن الاستجابة للحوادث (بالدقائق)</h4>
+                <canvas id="responseTimeChart"></canvas>
+            </div>
+            
+            <div class="chart-box">
+                <h4>🧠 دقة التنبؤ بالذكاء الاصطناعي (AI Accuracy)</h4>
+                <canvas id="aiAccuracyChart"></canvas>
+            </div>
+            
+            <div class="chart-box">
+                <h4>🚨 توزيع التنبيهات اليومي حسب الأولوية</h4>
+                <canvas id="priorityDistributionChart"></canvas>
+            </div>
+            
+            <div class="chart-box">
+                <h4>📍 الانتشار الجغرافي لكثافة المخالفات</h4>
+                <canvas id="geographicSpreadChart"></canvas>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+    // -----------------------------------------------------------
+    // إعدادات Chart.js الافتراضية - تحسين الألوان لـ Dark Mode
+    // -----------------------------------------------------------
+    Chart.defaults.color = '#a0a0b0'; 
+    Chart.defaults.borderColor = '#4a4a6e'; 
+
+    // -----------------------------------------------------------
+    // بيانات المدن الأساسية للمحاكاة
+    // -----------------------------------------------------------
+    const CITY_DATA = {
+        Riyadh: { 
+            speedBase: 50, 
+            connectionBase: [88, 7, 5], 
+            responseBase: 12, 
+            geoLabels: ['شمال الرياض', 'جنوب الرياض', 'شرق الرياض', 'غرب الرياض', 'وسط الرياض'] 
+        },
+        Jeddah: { 
+            speedBase: 30, 
+            connectionBase: [92, 5, 3], 
+            responseBase: 8, 
+            geoLabels: ['الكورنيش', 'طريق الملك', 'التحلية', 'جنوب جدة', 'البلد'] 
+        },
+        Dammam: { 
+            speedBase: 20, 
+            connectionBase: [85, 10, 5], 
+            responseBase: 15, 
+            geoLabels: ['الجبيل', 'ميناء الملك', 'الظهران', 'الخبر', 'وسط الدمام'] 
+        }
+    };
+
+    let charts = {}; 
+
+    // دالة مساعدة لتوليد بيانات عشوائية
+    const generateRandomData = (count, max, base = 0) => 
+        Array.from({length: count}, () => base + Math.floor(Math.random() * max));
+
+    // دالة لتوليد بيانات دقة الذكاء الاصطناعي بين 90 و 100
+    const generateAccuracyData = (count) => 
+        Array.from({length: count}, () => (90 + Math.random() * 10).toFixed(1));
+    
+    // دالة لتهيئة الرسوم البيانية
+    function initializeCharts() {
+        // Chart 1: مخالفات السرعة (Bar Chart)
+        charts.speedViolationChart = new Chart(document.getElementById('speedViolationChart'), {
+            type: 'bar',
+            data: {
+                labels: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'],
+                datasets: [{
+                    label: 'عدد المخالفات',
+                    data: generateRandomData(5, 50, CITY_DATA.Riyadh.speedBase),
+                    backgroundColor: '#00aaff',
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+
+        // Chart 2: حالة الاتصال (Doughnut Chart)
+        charts.connectionStatusChart = new Chart(document.getElementById('connectionStatusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['متصلة', 'غير متصلة', 'خلل فني'],
+                datasets: [{
+                    data: CITY_DATA.Riyadh.connectionBase,
+                    backgroundColor: ['#1abc9c', '#ffc107', '#ff5252']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // Chart 3: زمن الاستجابة (Line Chart)
+        charts.responseTimeChart = new Chart(document.getElementById('responseTimeChart'), {
+            type: 'line',
+            data: {
+                labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو'],
+                datasets: [{
+                    label: 'متوسط زمن الاستجابة (دقيقة)',
+                    data: generateRandomData(5, 5, CITY_DATA.Riyadh.responseBase),
+                    borderColor: '#ffc107',
+                    tension: 0.4,
+                    fill: false, 
+                    borderWidth: 3
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+        
+        // Chart 4: معدل دقة الذكاء الاصطناعي (AI Accuracy - Line Chart)
+        charts.aiAccuracyChart = new Chart(document.getElementById('aiAccuracyChart'), {
+            type: 'line',
+            data: {
+                labels: ['الماضي', 'الأسبوع 1', 'الأسبوع 2', 'الأسبوع 3', 'الحالي'],
+                datasets: [{
+                    label: 'دقة نموذج التنبؤ (%)',
+                    data: generateAccuracyData(5),
+                    borderColor: '#1abc9c',
+                    backgroundColor: 'rgba(26, 188, 156, 0.2)',
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { y: { min: 80, max: 100 } }
+            }
+        });
+
+        // Chart 5: توزيع التنبيهات حسب الأولوية (Stacked Bar Chart)
+        charts.priorityDistributionChart = new Chart(document.getElementById('priorityDistributionChart'), {
+            type: 'bar',
+            data: {
+                labels: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء'],
+                datasets: [
+                    { label: 'حرج 🔴', data: generateRandomData(4, 10, 5), backgroundColor: '#ff5252' },
+                    { label: 'عالي 🟠', data: generateRandomData(4, 15, 10), backgroundColor: '#ffc107' },
+                    { label: 'متوسط 🔵', data: generateRandomData(4, 25, 15), backgroundColor: '#00aaff' }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true }
+                }
+            }
+        });
+        
+        // Chart 6: الانتشار الجغرافي للمخالفات (Radar Chart)
+        charts.geographicSpreadChart = new Chart(document.getElementById('geographicSpreadChart'), {
+            type: 'radar',
+            data: {
+                labels: CITY_DATA.Riyadh.geoLabels,
+                datasets: [
+                    {
+                        label: 'كثافة المخالفات',
+                        data: generateRandomData(5, 70, 30),
+                        backgroundColor: 'rgba(0, 170, 255, 0.2)',
+                        borderColor: '#00aaff',
+                        pointBackgroundColor: '#00aaff',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#00aaff'
+                    }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+    
+    // -----------------------------------------------------------
+    // وظيفة الفلترة والتحديث الرئيسية
+    // -----------------------------------------------------------
+    function filterData() {
+        const cityKey = document.getElementById('city-filter').value;
+        const timeRange = document.getElementById('time-range').value;
+        const cityBase = CITY_DATA[cityKey];
+        
+        // 1. تحديث مخطط مخالفات السرعة
+        charts.speedViolationChart.data.datasets[0].data = generateRandomData(5, 50, cityBase.speedBase);
+        
+        // 2. تحديث مخطط حالة الاتصال
+        charts.connectionStatusChart.data.datasets[0].data = [
+            (cityBase.connectionBase[0] + Math.floor(Math.random() * 5)),
+            (cityBase.connectionBase[1] + Math.floor(Math.random() * 3)),
+            (cityBase.connectionBase[2] + Math.floor(Math.random() * 2))
+        ];
+
+        // 3. تحديث مخطط زمن الاستجابة (Line Chart)
+        charts.responseTimeChart.data.datasets[0].data = generateRandomData(5, 5, cityBase.responseBase);
+        
+        // 4. تحديث دقة الذكاء الاصطناعي (لإضفاء الحيوية)
+        charts.aiAccuracyChart.data.datasets[0].data = generateAccuracyData(5);
+
+        // 5. تحديث الانتشار الجغرافي
+        charts.geographicSpreadChart.data.labels = cityBase.geoLabels;
+        charts.geographicSpreadChart.data.datasets[0].data = generateRandomData(cityBase.geoLabels.length, 70, 30);
+        
+        // تحديث جميع الرسوم البيانية
+        for (const key in charts) {
+            charts[key].update();
+        }
+        
+        console.log(`تم تحديث البيانات للمدينة: ${cityKey} والنطاق الزمني: ${timeRange}`);
+    }
+
+
+    function generateReport() {
+        const type = document.getElementById('report-type').value;
+        const city = document.getElementById('city-filter').value;
+        const range = document.getElementById('time-range').value;
+        const date = document.getElementById('start-date').value;
+        const rows = [['نوع التقرير', type], ['المدينة', city], ['المدة', range], ['تاريخ البداية', date], ['مصدر البيانات', 'بيانات محاكاة لأغراض العرض'], [], ['المؤشر', 'الفئة', 'القيمة']];
+        for (const [key, chart] of Object.entries(charts)) {
+            const labels = chart.data.labels || [];
+            for (const ds of chart.data.datasets) {
+                labels.forEach((label, index) => rows.push([key, String(label), ds.data[index] ?? '']));
+            }
+        }
+        const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n');
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'A-Plate-report-' + new Date().toISOString().slice(0, 10) + '.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // إتاحة الدوال للوصول إليها من عناصر الـ HTML
+    window.filterData = filterData;
+    window.generateReport = generateReport;
+
+    // -----------------------------------------------------------
+    // التشغيل الأولي
+    // -----------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeCharts();
+        filterData(); 
+        
+        // تشغيل تحديث دوري (لمحاكاة البيانات الحية) كل 5 ثواني
+        // يتم تحديث المخططات عند تغيير الفلاتر فقط لتبقى النتائج قابلة للقراءة. 
+    });
+</script>
+</body>
+</html>

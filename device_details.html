@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>تفاصيل المركبة - نظام تتبع المرور</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
+    <style>
+        /* التنسيق الموحد */
+        body { 
+            margin: 0; 
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; 
+            background: #12121e;
+            color: #e0e0f0; 
+            direction: rtl;
+            text-align: right;
+        }
+        header { 
+            background: #1a1a2b; 
+            padding: 15px 20px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            border-bottom: 3px solid #00aaff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        .logo-text { 
+            font-size: 26px; 
+            font-weight: bold; 
+            color: white; 
+            display: flex; 
+            align-items: center;
+        }
+        .logo-text i { margin-left: 10px; color: #00aaff; }
+
+        .main-layout { 
+            display: grid; 
+            grid-template-columns: 220px 1fr; 
+            height: calc(100vh - 63px);
+        }
+        .sidebar { 
+            background: #1e1e2d; 
+            padding: 10px 0; 
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+        }
+        .sidebar a { 
+            display: flex;
+            align-items: center;
+            padding: 15px 20px; 
+            text-decoration: none; 
+            color: #d0d0e0; 
+            font-size: 16px; 
+            transition: background 0.3s, color 0.3s; 
+            border-right: 4px solid transparent; 
+        }
+        .sidebar a:hover, .sidebar .active { 
+            background: #28283c; 
+            border-right-color: #00aaff; 
+            color: #ffffff; 
+        }
+        .sidebar a i { margin-left: 10px; width: 20px; text-align: center; }
+        
+        /* محتوى تفاصيل المركبة */
+        .content { 
+            padding: 20px; 
+            display: grid; 
+            grid-template-columns: 2fr 1fr; 
+            gap: 25px; 
+            overflow-y: auto; 
+        }
+        .card { 
+            background: #1e1e2d; 
+            padding: 25px; 
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid #28283c;
+        }
+        .card h3 {
+            color: #00aaff;
+            border-bottom: 2px solid #28283c;
+            padding-bottom: 10px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .card h3 i { margin-left: 10px; color: #00aaff; font-size: 1.2em; }
+        .card p {
+            margin: 8px 0;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .card p strong { color: #d0d0e0; }
+        .card p span { color: #ffffff; }
+
+        /* ================================================= */
+        /* **1. تصميم البطاقة التقنية المُعدّل (Vehicle Tech Card)** */
+        /* ================================================= */
+        .vehicle-tech-card {
+            background: #0d0d18; 
+            color: #e0e0f0;
+            padding: 20px;
+            border-radius: 10px;
+            
+            /* الإطار النيون الأزرق والمظلل */
+            border: 2px solid #00aaff; 
+            box-shadow: 0 0 15px rgba(0, 170, 255, 0.8), 0 4px 15px rgba(0, 0, 0, 0.6); 
+            
+            text-align: center;
+            max-width: 450px; 
+        }
+
+        .vehicle-tech-card .card-header {
+            /* تعديل التنسيق لـ توسيط نص الدولة */
+            display: flex;
+            justify-content: center; /* توسيط المحتوى */
+            align-items: center;
+            font-size: 14px;
+            opacity: 1; /* جعل النص أكثر وضوحاً */
+            margin-bottom: 15px; /* زيادة التباعد عن الرقم الرئيسي */
+            color: #b3d9ff; /* لون فاتح لنص الدولة */
+        }
+        .vehicle-tech-card .region-flag { 
+             /* إزالة الهامش من اليمين لتوسط العلم مع النص */
+            margin-right: 5px; 
+            filter: drop-shadow(0 0 3px #00aaff); 
+        }
+
+        .vehicle-tech-card .main-number {
+            font-family: 'Consolas', 'Courier New', monospace; 
+            font-size: 45px; /* تصغير طفيف ليصبح أكثر احترافية */
+            font-weight: 900;
+            letter-spacing: 2px; 
+            color: #00aaff;
+            text-shadow: 0 0 15px rgba(0, 170, 255, 0.9); 
+            margin: 0 0 15px 0; 
+        }
+
+        .vehicle-tech-card .sub-info {
+            display: flex;
+            justify-content: center; 
+            gap: 15px; 
+            font-size: 13px; 
+            margin-bottom: 15px;
+            color: #9999bb;
+        }
+        .vehicle-tech-card .identifier, 
+        .vehicle-tech-card .ip-address {
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #28283c; 
+            color: #b3d9ff; 
+        }
+        .vehicle-tech-card .divider {
+            height: 1px;
+            background: linear-gradient(to right, #1a1a2b, #00aaff, #1a1a2b); 
+            margin: 15px 0; 
+        }
+        .vehicle-tech-card .status-grid {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+        }
+        .tech-status {
+            padding: 0;
+            background: transparent;
+            box-shadow: none;
+            text-align: center; 
+        }
+        .tech-status .status-value {
+            font-size: 28px; 
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-family: 'Consolas', 'Courier New', monospace;
+        }
+        .tech-status .status-label {
+            font-size: 14px; 
+            color: #9999bb;
+            margin-top: 5px;
+        }
+
+        /* ألوان الإضاءة النيون */
+        .red-glow {
+            color: #ff5252; 
+            text-shadow: 0 0 10px rgba(255, 82, 82, 0.8);
+        }
+        .green-glow {
+            color: #1abc9c; 
+            text-shadow: 0 0 10px rgba(26, 188, 156, 0.8);
+        }
+        .blue-glow {
+            color: #00aaff; 
+            text-shadow: 0 0 10px rgba(0, 170, 255, 0.8);
+        }
+
+        /* لوحة الموقع والتحكم وباقي العناصر */
+        #live-map-small { 
+            height: 350px; 
+            width: 100%; 
+            border-radius: 8px; 
+            margin-bottom: 25px;
+            border: 1px solid #00aaff;
+        }
+        .live-status-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px; 
+            margin-bottom: 25px; 
+            text-align: center;
+        }
+        .status-item {
+            background: #28283c;
+            padding: 15px 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+            transition: background 0.3s;
+        }
+        .status-item strong { display: block; font-size: 20px; margin-top: 5px; }
+        .action-btn-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .action-btn { 
+            flex-grow: 1;
+            background: #00aaff; 
+            color: white; 
+            border: none; 
+            padding: 12px 15px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: background 0.3s, transform 0.1s;
+            min-width: 120px;
+        }
+        .btn-warning { background: #ffc107 !important; color: #1e1e2d !important; }
+        .btn-danger { background: #dc3545 !important; }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            text-align: center;
+            margin-top: 15px;
+        }
+        .kpi-item {
+            background: #28283c;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .kpi-item i { font-size: 24px; color: #1abc9c; margin-bottom: 5px; }
+        .kpi-item .kpi-value { font-size: 24px; font-weight: bold; color: white; display: block; }
+        .kpi-item .kpi-label { font-size: 12px; color: #8888aa; display: block; }
+        .log-entry { 
+            padding: 10px 0; 
+            border-bottom: 1px solid #28283c; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            font-size: 15px; 
+            transition: background 0.2s;
+        }
+        .log-entry:last-child { border-bottom: none; }
+        .log-time { color: #8888aa; margin-left: 10px; }
+        .log-tag { padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+        .alert-critical { background: #dc3545; color: white; }
+        .alert-high { background: #ffc107; color: #1e1e2d; }
+        .log-system { background: #00aaff; color: white; }
+        .log-normal { background: #3c3c5c; color: #d0d0e0; }
+
+        @media (max-width: 900px) {
+            .content {
+                grid-template-columns: 1fr; 
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="assets/fixes.css">
+    <link rel="stylesheet" href="assets/refined.css">
+</head>
+<body onload="loadVehicleDetails()">
+
+<header>
+    <div class="logo-text">
+        <i class="fas fa-car-side"></i> تفاصيل المركبة
+    </div>
+</header>
+
+<div class="main-layout">
+      <div class="sidebar">
+        <a href="dashboard.html"> <i class="fas fa-tachometer-alt"></i> لوحة القيادة</a>
+        <a href="alerts_center.html"> <i class="fas fa-bell"></i> مركز التنبيهات</a>
+        <a href="analytics_reports.html" > <i class="fas fa-chart-line"></i> التحليل والتقارير</a>
+        <a href="device_details.html" class="active" aria-current="page"> <i class="fas fa-car"></i> تفاصيل المركبة</a>
+        <a href="field_inspector_mgt.html"> <i class="fas fa-users"></i> إدارة المفتشين</a>
+    </div>
+
+    <div class="content">
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h1><i class="fas fa-route"></i> تتبع المركبة: <span id="vehicle-name-display" style="color: #00aaff;">...</span></h1>
+                
+                <div class="vehicle-tech-card">
+                    <div class="card-header">
+                        <span class="region-flag">🇸🇦</span>
+                        <span class="region-text">المملكة العربية السعودية</span>
+                    </div>
+                    <div class="main-number" id="main-plate-display">214.220.34</div>
+                    <div class="sub-info">
+                        <span class="identifier">V18 | المعرّف: <span id="identifier-id">...</span></span>
+                        <span class="ip-address">IP: <span id="ip-display">8.50.197.187</span></span>
+                    </div>
+                    <hr class="divider">
+                    <div class="status-grid">
+                        <div class="status-item tech-status">
+                            <div class="status-value red-glow" id="system-version">8.0.0</div>
+                            <div class="status-label">إصدار النظام</div>
+                        </div>
+                        <div class="status-item tech-status">
+                            <div class="status-value green-glow" id="performance-status">2.3</div>
+                            <div class="status-label">حالة الأداء</div>
+                        </div>
+                        <div class="status-item tech-status">
+                            <div class="status-value blue-glow" id="counter-read">1140</div>
+                            <div class="status-label">قراءة العداد</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3><i class="fas fa-file-contract"></i> بيانات الترخيص والملكية</h3>
+                <p><strong>الجهة المالكة:</strong> <span id="owner-name">...</span></p>
+                <p><strong>رقم الهوية/الترخيص:</strong> <span id="owner-id">...</span></p>
+                <p><strong>طراز المركبة:</strong> <span id="vehicle-model">...</span></p>
+                <p><strong>نوع المركبة:</strong> <span id="vehicle-type">...</span></p>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-map-marked-alt"></i> الموقع والحالة المباشرة</h3>
+                <div id="live-map-small"></div>
+                
+                <div class="live-status-grid">
+                    <div class="status-item">📡 حالة الاتصال<strong id="connection-status" style="color:#1abc9c;">متصل</strong></div>
+                    <div class="status-item">🔋 مستوى البطارية<strong id="battery-status">78%</strong></div>
+                    <div class="status-item">🚀 السرعة الحالية<strong id="speed-status">85 كم/س</strong></div>
+                    <div class="status-item">🚨 حالة التنبيه<strong id="alert-status" style="color:#ff5252;">حرج</strong></div>
+                    <div class="status-item">🧭 آخر تحديث<strong id="last-update">منذ 3 ثوان</strong></div>
+                    <div class="status-item">📍 الإحداثيات<strong id="coordinates">24.71, 46.67</strong></div>
+                </div>
+                
+                <hr style="border-color: #28283c;">
+                
+                <h3><i class="fas fa-terminal"></i> إجراءات التحكم عن بعد</h3>
+                <div class="action-btn-container">
+                    <button class="action-btn" onclick="sendAction('lock')"><i class="fas fa-lock"></i> قفل اللوحة</button>
+                    <button class="action-btn btn-warning" onclick="sendAction('buzzer')"><i class="fas fa-volume-up"></i> تفعيل الإنذار</button>
+                    <button class="action-btn btn-danger" onclick="sendAction('disable')"><i class="fas fa-power-off"></i> تعطيل اللوحة</button>
+                    <button class="action-btn" onclick="sendAction('restart')"><i class="fas fa-sync-alt"></i> إعادة تشغيل</button>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <h3><i class="fas fa-chart-pie"></i> مؤشرات الأداء الرئيسية (شهرية)</h3>
+                <div class="kpi-grid">
+                    <div class="kpi-item">
+                        <i class="fas fa-road"></i>
+                        <span class="kpi-value" id="monthly-distance">12,450 كم</span>
+                        <span class="kpi-label">إجمالي المسافة المقطوعة</span>
+                    </div>
+                    <div class="kpi-item">
+                        <i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i>
+                        <span class="kpi-value" id="monthly-alerts">37</span>
+                        <span class="kpi-label">عدد تنبيهات السرعة</span>
+                    </div>
+                    <div class="kpi-item">
+                        <i class="fas fa-clock"></i>
+                        <span class="kpi-value" id="monthly-runtime">280 ساعة</span>
+                        <span class="kpi-label">ساعات التشغيل الفعالة</span>
+                    </div>
+                    <div class="kpi-item">
+                        <i class="fas fa-tachometer-alt" style="color: #dc3545;"></i>
+                        <span class="kpi-value" id="max-speed">155 كم/س</span>
+                        <span class="kpi-label">أقصى سرعة مسجلة</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-user-tag"></i> بيانات المفتش الميداني</h3>
+                <p><strong>اسم المفتش:</strong> <span id="inspector-name">علي أحمد (ID: F102)</span></p>
+                <p><strong>رقم الهاتف:</strong> <span id="inspector-phone">+966 50 123 4567</span></p>
+                <p><strong>آخر تسجيل دخول:</strong> <span id="inspector-login">منذ 15 دقيقة</span></p>
+                <p><strong>حالة التكليف:</strong> <span id="assignment-status" style="color: #1abc9c; font-weight: bold;">مكلف نشط</span></p>
+            </div>
+
+
+            <h2><i class="fas fa-history"></i> سجل النشاط الأخير</h2>
+            <div class="card" style="min-height: 40vh; padding: 15px;">
+                <div id="activity-log">
+                    <div class="log-entry">
+                        <span class="log-time">11:35</span>
+                        <span class="log-desc">السرعة 120 كم/س (مخالفة)</span>
+                        <span class="log-tag alert-critical">🔥 تنبيه حرج</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">11:30</span>
+                        <span class="log-desc">تم قفل اللوحة (عن بعد)</span>
+                        <span class="log-tag log-system">⚙️ إجراء نظام</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">11:25</span>
+                        <span class="log-desc">تم رصد محاولة عبث بالمستشعر</span>
+                        <span class="log-tag alert-critical">🚨 TAMPER ALERT!</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">11:00</span>
+                        <span class="log-desc">تحديث بيانات الموقع الحالي</span>
+                        <span class="log-tag log-normal">✔️ عادي</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">10:45</span>
+                        <span class="log-desc">انحراف عن المسار المحدد (Geofence)</span>
+                        <span class="log-tag alert-high">⚠️ تنبيه عالٍ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let smallMap;
+    let carMarker;
+    let currentVehicleName = "مركبة دورية (افتراضية)";
+    const FALLBACK_LAT = 24.7136;
+    const FALLBACK_LNG = 46.6753;
+    
+    // محاكاة جلب بيانات المركبة بناءً على المعرف (ID)
+    function getVehicleData(id) {
+        const vehicleIndex = parseInt(id.replace('V', '')) || 54; 
+        
+        const plateNumber = `س ع د ${vehicleIndex % 900 + 100}`; 
+        const modelYear = 2020 + (vehicleIndex % 5);
+        const modelName = ['فورد تورس', 'شيفروليه تاهو', 'تويوتا كامري', 'هيونداي إلنترا', 'نيسان باترول'][vehicleIndex % 5];
+        const ownerID = 9876543210 + (vehicleIndex * 10);
+        const vehicleType = ['دورية', 'شحن', 'مدني', 'خدمات'][vehicleIndex % 4];
+        
+        const initialLat = FALLBACK_LAT + (vehicleIndex * 0.001) % 0.05 - 0.025;
+        const initialLng = FALLBACK_LNG + (vehicleIndex * 0.002) % 0.08 - 0.04;
+
+        // --- بيانات البطاقة التقنية المحاكاة ---
+        const mainPlatePart = `214.220.${30 + (vehicleIndex % 10)}`;
+        const identifier = `V${10 + (vehicleIndex % 10)}`;
+        const ipAddressPart = `8.50.${190 + (vehicleIndex % 10)}.187`;
+        const systemVersion = `${8 + (vehicleIndex % 2)}.0.${(vehicleIndex % 5)}`;
+        const performanceStatus = (2.0 + (vehicleIndex % 10) / 10).toFixed(1);
+        const counterRead = 1100 + (vehicleIndex * 10);
+        // --- نهاية بيانات البطاقة التقنية المحاكاة ---
+
+        return {
+            id: plateNumber, 
+            name: `مركبة دورية #${vehicleIndex}`,
+            ownerName: `وزارة الداخلية - قطاع المرور (القسم ${vehicleIndex % 10 + 1})`,
+            ownerID: ownerID,
+            vehicleModel: `${modelName} ${modelYear}`,
+            vehicleType: vehicleType,
+            initialLat: initialLat,
+            initialLng: initialLng,
+
+            mainPlate: mainPlatePart,
+            identifierId: identifier,
+            ipAddress: ipAddressPart,
+            systemVersion: systemVersion,
+            performanceStatus: performanceStatus,
+            counterRead: counterRead,
+        };
+    }
+
+    // وظيفة تحميل بيانات المركبة عند فتح الصفحة
+    function loadVehicleDetails() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const vehicleId = urlParams.get('id') || 'V54';
+        
+        const vehicle = getVehicleData(vehicleId);
+        
+        if (vehicle) {
+            currentVehicleName = vehicle.name;
+            
+            // 1. تحديث محتوى النصوص
+            document.getElementById('vehicle-name-display').textContent = vehicle.name;
+            
+            // تحديث بيانات البطاقة التقنية
+            document.getElementById('main-plate-display').textContent = vehicle.mainPlate;
+            document.getElementById('identifier-id').textContent = vehicle.identifierId;
+            document.getElementById('ip-display').textContent = vehicle.ipAddress; 
+            document.getElementById('system-version').textContent = vehicle.systemVersion;
+            document.getElementById('performance-status').textContent = vehicle.performanceStatus;
+            document.getElementById('counter-read').textContent = vehicle.counterRead;
+
+            document.getElementById('owner-name').textContent = vehicle.ownerName;
+            document.getElementById('owner-id').textContent = vehicle.ownerID;
+            document.getElementById('vehicle-model').textContent = vehicle.vehicleModel;
+            document.getElementById('vehicle-type').textContent = vehicle.vehicleType;
+            
+            // 2. تهيئة الخريطة والموقع
+            const [initialLat, initialLng] = [vehicle.initialLat, vehicle.initialLng];
+            document.getElementById('coordinates').textContent = `${initialLat.toFixed(4)}, ${initialLng.toFixed(4)}`;
+
+            
+            smallMap = L.map('live-map-small').setView([initialLat, initialLng], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(smallMap);
+            
+            const historyCoords = [
+                [initialLat + 0.01, initialLng - 0.01],
+                [initialLat, initialLng],
+                [initialLat - 0.005, initialLng + 0.005],
+                [initialLat, initialLng + 0.01]
+            ];
+            L.polyline(historyCoords, { color: '#00aaff', weight: 4, opacity: 0.7 }).addTo(smallMap);
+            
+            carMarker = L.marker([initialLat, initialLng], {
+                icon: L.icon({
+                    iconUrl: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg"><path fill="#00Aaff" d="M15 0C6.716 0 0 6.716 0 15c0 10.5 15 27 15 27s15-16.5 15-27c0-8.284-6.716-15-15-15z"/><circle fill="white" cx="15" cy="15" r="5"/></svg>`),
+                    iconSize: [30, 42], iconAnchor: [15, 42]
+                })
+            }).addTo(smallMap);
+
+            setInterval(updateDeviceDetails, 3000);
+            updateDeviceDetails();
+
+        } else {
+            document.getElementById('vehicle-name-display').textContent = '⚠️ المركبة غير موجودة';
+            document.getElementById('live-map-small').innerHTML = '<p style="text-align:center; padding-top: 100px;">لم يتم العثور على بيانات لهذه المركبة.</p>';
+        }
+    }
+
+
+    function updateDeviceDetails() {
+        if (!carMarker || !smallMap) return;
+
+        const battery = (60 + Math.floor(Math.random() * 40));
+        const speed = (60 + Math.floor(Math.random() * 50));
+        document.getElementById('battery-status').textContent = battery + '%';
+        document.getElementById('speed-status').textContent = speed + ' كم/س';
+        document.getElementById('last-update').textContent = `منذ ${Math.floor(Math.random() * 5) + 1} ثوان`;
+        
+        let currentLatLng = carMarker.getLatLng();
+        let newLat = currentLatLng.lat + (Math.random() - 0.5) * 0.0005;
+        let newLng = currentLatLng.lng + (Math.random() - 0.5) * 0.001;
+        carMarker.setLatLng([newLat, newLng]);
+        document.getElementById('coordinates').textContent = `${newLat.toFixed(4)}, ${newLng.toFixed(4)}`;
+
+        
+        const alerts = ['حرج', 'عادي', 'عادي', 'متوسط'];
+        const alertStatus = alerts[Math.floor(Math.random() * alerts.length)];
+        document.getElementById('alert-status').textContent = alertStatus;
+        document.getElementById('alert-status').style.color = alertStatus === 'حرج' ? '#ff5252' : (alertStatus === 'متوسط' ? '#ffc107' : '#1abc9c');
+        document.getElementById('connection-status').style.color = Math.random() < 0.9 ? '#1abc9c' : '#dc3545';
+        document.getElementById('connection-status').textContent = Math.random() < 0.9 ? 'متصل' : 'غير متصل';
+    }
+    
+    function sendAction(action) {
+        alert(`وضع المحاكاة: هذا إجراء توضيحي (${action}) للمركبة ${currentVehicleName}، ولم يُرسل أمر لأي جهاز فعلي.`);
+    }
+
+</script>
+</body> 
+</html>

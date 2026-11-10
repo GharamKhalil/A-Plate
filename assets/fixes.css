@@ -1,0 +1,21 @@
+
+/* إصلاحات توافق بدون تغيير تصميم المشروع الأصلي */
+*, *::before, *::after { box-sizing: border-box; }
+.sidebar a:hover { background: #34344e; border-right-color: #00aaff; color: #fff; }
+.sidebar a.active, .sidebar a[aria-current="page"] { background: #3c3c5c; border-right-color: #00aaff; color: #fff; }
+.sidebar a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #00aaff; outline-offset: 2px; }
+.sidebar a { text-decoration: none; }
+@media (max-width: 850px) {
+  body { overflow-x: hidden; }
+  header { padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
+  .logo-text { font-size: 21px; }
+  .main-layout, .dashboard-layout { display: flex !important; flex-direction: column !important; min-height: auto !important; height: auto !important; }
+  .sidebar { display: flex !important; width: 100% !important; max-width: 100% !important; flex-wrap: nowrap; overflow-x: auto; padding: 5px !important; min-height: auto !important; flex-shrink: 0; }
+  .sidebar a { flex: 0 0 auto; width: auto !important; padding: 12px !important; white-space: nowrap; font-size: 14px !important; }
+  .content, #map-container { width: 100% !important; min-width: 0 !important; max-width: 100% !important; overflow-x: auto; }
+  .content { display: block !important; padding: 12px !important; }
+  .card { max-width: 100%; }
+  #map, #inspector-map, #live-map-small { min-height: 330px; }
+  canvas { max-width: 100% !important; }
+  table { display: block; overflow-x: auto; max-width: 100%; }
+}

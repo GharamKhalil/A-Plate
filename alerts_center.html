@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>مركز التنبيهات وإدارة الحوادث المتقدم</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* ------------------------------------------- */
+        /* التنسيق الأساسي والموحد */
+        /* ------------------------------------------- */
+        body { margin: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #1e1e2d; color: #d0d0e0; }
+        header { 
+            background: #28283c; 
+            padding: 15px 30px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            border-bottom: 3px solid #00aaff; 
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+        }
+        .logo-text { font-size: 26px; font-weight: 600; color: white; }
+
+        /* ------------------------------------------- */
+        /* القائمة الجانبية (Sidebar) - تحسين الأيقونات */
+        /* ------------------------------------------- */
+        .main-layout { display: grid; grid-template-columns: 240px 1fr; height: calc(100vh - 66px); }
+        .sidebar { background: #2a2a3e; padding: 20px 0; border-right: 1px solid #3c3c5c; }
+        .sidebar a { 
+            display: flex;
+            align-items: center;
+            padding: 14px 30px; 
+            text-decoration: none; 
+            color: #d0d0e0; 
+            font-size: 15px; 
+            transition: background 0.3s, color 0.3s; 
+            border-right: 4px solid transparent; 
+            font-weight: 500;
+            gap: 10px;
+        }
+        .sidebar a:hover, .sidebar .active { 
+            background: #3c3c5c; 
+            border-right-color: #00aaff; 
+            color: white; 
+        }
+        /* تم تعديل اسم الفئة من .material-icons-outlined إلى .sidebar a i */
+        .sidebar a i {
+            font-size: 20px;
+            color: #d0d0e0;
+        }
+        .sidebar .active i {
+            color: white;
+        }
+        
+        /* ------------------------------------------- */
+        /* محتوى التنبيهات (Content Area) */
+        /* ------------------------------------------- */
+        .content { 
+            padding: 30px; 
+            display: grid; 
+            grid-template-columns: 2.5fr 1fr; 
+            gap: 30px; 
+            overflow: auto; 
+        }
+        
+        /* جدول التنبيهات (يسار) */
+        .alerts-panel { 
+            background: #2a2a3e; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); 
+            max-height: calc(100vh - 126px);
+            display: flex;
+            flex-direction: column;
+        }
+        .alerts-table-container { 
+            overflow-x: hidden; 
+            overflow-y: auto; 
+            flex-grow: 1; 
+            margin-top: 10px;
+        }
+
+        /* ------------------------------------------- */
+        /* تحسينات الجدول: تثبيت الرؤوس وتمايز الصفوف */
+        /* ------------------------------------------- */
+        .alerts-table { 
+            width: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0 10px; 
+        }
+        .alerts-table th, .alerts-table td { 
+            padding: 14px 18px; 
+            text-align: right; 
+            border: none; 
+            font-size: 14px; 
+        }
+        .alerts-table th { 
+            background-color: #3c3c5c; 
+            color: #d0d0e0; 
+            position: sticky; 
+            top: 0; 
+            z-index: 10;
+        }
+        
+        /* صفوف البيانات */
+        .alerts-table tbody tr { 
+            background: #3c3c5c; 
+            cursor: pointer; 
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .alerts-table tbody tr:hover { 
+            background: #4a4a6e; 
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+        }
+        .alerts-table tbody tr.selected {
+            background: #4a4a6e; 
+            border-right: 4px solid #00aaff;
+        }
+        
+        /* تلوين الصفوف حسب الأولوية */
+        .priority-critical { border-right: 5px solid #ff5252; } 
+        .priority-high { border-right: 5px solid #ffc107; } 
+        .priority-medium { border-right: 5px solid #1abc9c; } 
+        
+        /* تنسيق زر المعالجة داخل الجدول */
+        .action-table-btn {
+            background: #00aaff;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        .action-table-btn:hover { background: #0088cc; }
+
+
+        /* ------------------------------------------- */
+        /* لوحة التفاصيل (يمين) - تعديل الـ height-fit */
+        /* ------------------------------------------- */
+        .details-panel { 
+            background: #2a2a3e; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); 
+            height: fit-content; 
+            position: sticky;
+            top: 30px; 
+        }
+        .details-panel h3 { 
+            color: #00aaff; 
+            border-bottom: 1px solid #3c3c5c; 
+            padding-bottom: 15px; 
+            margin-top: 0; 
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .details-info p { margin-bottom: 10px; font-size: 15px; }
+        .details-info strong { 
+            color: #a0a0b0; 
+            display: inline-block; 
+            width: 120px; 
+            font-weight: 400;
+        }
+        .action-btn-group { margin-top: 30px; display: flex; flex-direction: column; gap: 10px; }
+        .action-btn { 
+            padding: 12px 20px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: background 0.3s, transform 0.1s;
+        }
+        .action-btn:hover { transform: translateY(-1px); }
+        .investigate-btn { background: #00aaff; color: white; }
+        .dismiss-btn { background: #1abc9c; color: white; }
+        .critical-dismiss-btn { background: #dc3545; color: white; }
+        .field-btn { background: #ffc107; color: #1e1e2d; text-align: center; text-decoration: none; display: block;}
+    </style>
+    <link rel="stylesheet" href="assets/fixes.css">
+    <link rel="stylesheet" href="assets/refined.css">
+</head>
+<body>
+
+<header>
+    <div style="display: flex; align-items: center;">
+        <span class="logo-text">مركز التنبيهات وإدارة الحوادث</span>
+    </div>
+</header>
+
+<div class="main-layout">
+   <div class="sidebar">
+        <a href="dashboard.html"> <i class="fas fa-tachometer-alt"></i> لوحة القيادة</a>
+        <a href="alerts_center.html" class="active" aria-current="page"> <i class="fas fa-bell"></i> مركز التنبيهات</a>
+        <a href="analytics_reports.html"> <i class="fas fa-chart-bar"></i> التحليل والتقارير</a>
+        <a href="device_details.html"> <i class="fas fa-car"></i> تفاصيل المركبة</a>
+        <a href="field_inspector_mgt.html"> <i class="fas fa-users"></i> إدارة المفتشين</a>
+    </div>
+
+    <div class="content">
+        <div class="alerts-panel">
+            <h2 style="color: white; margin-top: 0; font-weight: 500;">جدول التنبيهات النشطة (<span id="alertsCountHeader">5</span>)</h2>
+            
+            <div class="alerts-table-container">
+                <table class="alerts-table" id="alertsTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>نوع التنبيه</th>
+                            <th>المركبة/الجهاز</th>
+                            <th>الأولوية</th>
+                            <th>الحالة</th>
+                            <th>وقت الاكتشاف</th>
+                            <th>الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="details-panel">
+            <h3 id="detailsHeader">🔴 تفاصيل التنبيه المختار</h3>
+            
+            <p style="font-size: 18px; color: #00aaff; font-weight: 600;" id="alertTypeDisplay">الرجاء اختيار تنبيه من الجدول</p>
+            
+            <div class="details-info" style="line-height: 2;">
+                <p><strong>المركبة:</strong> <span id="vehicleName">غير محدد</span></p>
+                <p><strong>معرّف الجهاز:</strong> <span id="vehicleIP">غير محدد</span></p>
+                <p><strong>الإحداثيات:</strong> <span id="vehicleCoords">غير محدد</span></p>
+                <p><strong>وقت التنبيه:</strong> <span id="alertTime">غير محدد</span></p>
+                <p><strong>الموقع التقريبي:</strong> <span id="alertLocation">غير محدد</span></p>
+                <hr style="border-color: #3c3c5c; margin: 15px 0;">
+                <p style="font-weight: bold; color: white;">**سجل الإجراء:** <span id="actionLog" style="color: #1abc9c;">لم يتم اتخاذ إجراء بعد.</span></p>
+            </div>
+            
+            <div class="action-btn-group">
+                <button class="action-btn investigate-btn" id="investigateBtn" onclick="handleAlertAction('investigate')">✅ تولّي المعالجة</button>
+                <button class="action-btn critical-dismiss-btn" id="dismissBtn" onclick="handleAlertAction('dismiss')">❌ إغلاق التنبيه</button>
+                <a href="field_inspector_mgt.html" class="action-btn field-btn">🧑‍✈️ تكليف مفتش ميداني</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ALERTS_DATA = [
+        { id: 1, type: "**محاولة عبث في اللوحة (Tamper Alert)**", device: "IP-227.64.XXX", vehicle: "مركبة دورية #54", priority: 'critical', status: 'جديد', time: '11:25:40', coords: '24.7150, 46.6850', location: 'طريق الملك فهد - مخرج 8', action: 'يتطلب إرسال فريق استجابة فورية.' },
+        { id: 2, type: "مخالفة سرعة (+120 كم/س)", device: "شاحنة نقل #101", vehicle: "شاحنة نقل #101", priority: 'high', status: 'قيد المراجعة', time: '11:00:15', coords: '24.7220, 46.6710', location: 'طريق الدائري الشرقي', action: 'تم تصنيفها كمخالفة، بانتظار تأكيد الإغلاق.' },
+        { id: 3, type: "انحراف عن المسار المخطط", device: "مركبة دورية #54", vehicle: "مركبة دورية #54", priority: 'high', status: 'قيد المراجعة', time: '10:50:00', coords: '24.7110, 46.6780', location: 'شارع العليا - تحويله', action: 'تحويل التنبيه لقائد المركبة للتوضيح.' },
+        { id: 4, type: "خلل في الإرسال (توقع AI)", device: "مركبة أجرة #S789", vehicle: "مركبة أجرة #S789", priority: 'medium', status: 'مُتَوَلَّى', time: '10:45:30', coords: '24.7300, 46.6900', location: 'أحياء شمال الرياض', action: 'فريق الصيانة على علم ومُكلَّف بالتدخل.' },
+        { id: 5, type: "انخفاض طاقة البطارية (15%)", device: "IP-192.18.XXX", vehicle: "مركبة شحن #300", priority: 'medium', status: 'قيد المراجعة', time: '10:30:00', coords: '24.7000, 46.7050', location: 'مستودعات الشحن', action: 'تم إرسال تنبيه لإعادة شحن المركبة فوراً.' }
+    ];
+
+    let selectedAlertId = ALERTS_DATA.length > 0 ? ALERTS_DATA[0].id : null; 
+
+    function renderAlertsTable() {
+        const tbody = document.querySelector('#alertsTable tbody');
+        tbody.innerHTML = '';
+        
+        ALERTS_DATA.forEach((alert, index) => {
+            const row = tbody.insertRow();
+            
+            // تحديد فئة الأولوية لـ Border-Right
+            row.classList.add(`priority-${alert.priority}`);
+
+            // تحديد فئة الصف المختار
+            if (alert.id === selectedAlertId) {
+                row.classList.add('selected');
+            }
+
+            row.setAttribute('data-alert-id', alert.id);
+            row.onclick = () => selectAlert(alert.id);
+
+            // تم تعديل نص الأولوية ليشمل الأيقونة
+            const priorityText = alert.priority === 'critical' ? 'حرج 🔴' : alert.priority === 'high' ? 'عالي 🟠' : 'متوسط 🟢';
+            
+            let statusColor;
+            let actionText = '';
+
+            switch (alert.status) {
+                case 'جديد':
+                    statusColor = '#ff5252';
+                    actionText = 'تولّي فوري';
+                    break;
+                case 'قيد المراجعة':
+                    statusColor = '#ffc107';
+                    actionText = 'متابعة';
+                    break;
+                case 'مُتَوَلَّى':
+                    statusColor = '#00aaff';
+                    actionText = 'قيد العمل';
+                    break;
+                default:
+                    statusColor = '#d0d0e0';
+                    actionText = '---';
+            }
+
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td style="font-weight: 500;">${alert.type}</td>
+                <td>${alert.vehicle}</td>
+                <td>${priorityText}</td>
+                <td style="color: ${statusColor}; font-weight: 600;">${alert.status}</td>
+                <td>${alert.time}</td>
+                <td><button class="action-table-btn" onclick="event.stopPropagation(); selectAlert(${alert.id}); handleAlertAction('investigate')">${actionText}</button></td>
+            `;
+        });
+
+        // تحديث عدد التنبيهات في العنوان
+        document.querySelector('#alertsCountHeader').textContent = ALERTS_DATA.length;
+
+        // التأكد من عرض التفاصيل بعد التحديث
+        if (selectedAlertId) selectAlert(selectedAlertId);
+        else document.getElementById('alertTypeDisplay').textContent = 'لا توجد تنبيهات نشطة.';
+    }
+
+    function selectAlert(id) {
+        selectedAlertId = id;
+        const alert = ALERTS_DATA.find(a => a.id === id);
+        if (!alert) return;
+
+        // تحديث لوحة التفاصيل
+        const isCritical = alert.priority === 'critical';
+        document.getElementById('detailsHeader').innerHTML = isCritical ? '🔴 تفاصيل التنبيه الحرج' : '🟡 تفاصيل التنبيه المختار';
+        document.getElementById('alertTypeDisplay').innerHTML = alert.type;
+        document.getElementById('vehicleName').textContent = alert.vehicle;
+        document.getElementById('vehicleIP').textContent = alert.device;
+        document.getElementById('vehicleCoords').textContent = alert.coords;
+        // تم إضافة تنسيق الوقت
+        document.getElementById('alertTime').textContent = alert.time + ` (منذ ${ALERTS_DATA.length - id} دقائق)`;
+        document.getElementById('alertLocation').textContent = alert.location;
+        document.getElementById('actionLog').textContent = alert.action;
+        document.getElementById('actionLog').style.color = (alert.status === 'مُتَوَلَّى') ? '#1abc9c' : '#ffc107';
+
+        // تحديث الأزرار بناءً على الحالة
+        document.getElementById('investigateBtn').style.display = (alert.status === 'جديد' || alert.status === 'قيد المراجعة') ? 'block' : 'none';
+        
+        // استخدام اللون الأحمر الحرج للـ Dismiss إذا كانت الأولوية حرجة
+        document.getElementById('dismissBtn').textContent = '❌ إغلاق التنبيه';
+        document.getElementById('dismissBtn').style.backgroundColor = isCritical ? '#dc3545' : '#1abc9c';
+
+        // تمييز الصف المختار وإلغاء تمييز الباقي
+        document.querySelectorAll('#alertsTable tbody tr').forEach(row => {
+            row.classList.remove('selected');
+            if (row.getAttribute('data-alert-id') == id) {
+                row.classList.add('selected');
+            }
+        });
+    }
+
+    function handleAlertAction(action) {
+        let alert = ALERTS_DATA.find(a => a.id === selectedAlertId);
+        if (!alert) return;
+
+        if (action === 'investigate') {
+            alert.status = 'مُتَوَلَّى';
+            alert.action = `تم تولي المهمة الآن بواسطة المشغل (${new Date().toLocaleTimeString('ar-SA')}). جاري التحقيق.`;
+            document.getElementById('investigateBtn').style.display = 'none';
+        } else if (action === 'dismiss') {
+            if (!confirm('هل أنت متأكد من إغلاق هذا التنبيه؟ يجب أن يتم التأكد من حل المشكلة.')) return;
+            
+            const index = ALERTS_DATA.findIndex(a => a.id === selectedAlertId);
+            if (index !== -1) ALERTS_DATA.splice(index, 1);
+            
+            selectedAlertId = ALERTS_DATA.length > 0 ? ALERTS_DATA[0].id : null;
+            
+            alert(`تم إغلاق التنبيه ${alert.id}.`);
+        }
+
+        renderAlertsTable();
+    }
+    
+    // إتاحة الدوال للوصول إليها من عناصر الـ HTML
+    window.handleAlertAction = handleAlertAction;
+    window.selectAlert = selectAlert;
+
+    document.addEventListener('DOMContentLoaded', renderAlertsTable);
+</script>
+</body>
+</html>
